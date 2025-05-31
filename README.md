@@ -2,6 +2,11 @@
 
 A modern, web-based WhatsApp auto-reply bot built with Baileys (unofficial WhatsApp API) and Express.js. Features a beautiful single-page interface for QR code scanning and auto-reply management.
 
+## Screenshots
+<img width="856" alt="Screen Shot 2025-05-31 at 20 13 46" src="https://github.com/user-attachments/assets/3148fa43-0887-46c2-b221-88709a065116" />
+<img width="858" alt="Screen Shot 2025-05-31 at 20 14 38" src="https://github.com/user-attachments/assets/dcc5b313-43c4-4236-a4c6-430e0e795054" />
+
+
 ## Features
 
 - 🤖 **Automatic Replies**: Set up keyword-based auto replies
