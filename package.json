@@ -1,0 +1,24 @@
+{
+  "name": "whatsapp-autoreply",
+  "version": "1.0.0",
+  "description": "WhatsApp Auto Reply Bot using Baileys",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "qrcode": "^1.5.3",
+    "fs-extra": "^11.2.0",
+    "pino": "^8.17.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["whatsapp", "baileys", "autoreply", "bot"],
+  "author": "",
+  "license": "MIT"
+}

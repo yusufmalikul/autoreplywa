@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Auto Reply Bot</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .status-connected {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-disconnected {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .qr-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .qr-code {
+            max-width: 300px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .qr-code img {
+            width: 100%;
+            height: auto;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .form-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #25D366;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .auto-replies-list {
+            margin-top: 30px;
+        }
+
+        .auto-reply-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .auto-reply-content {
+            flex: 1;
+        }
+
+        .keyword {
+            font-weight: 600;
+            color: #25D366;
+            margin-bottom: 5px;
+        }
+
+        .reply {
+            color: #666;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .disconnect-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .auto-reply-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .auto-reply-item button {
+                margin-top: 10px;
+                align-self: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 WhatsApp Auto Reply Bot</h1>
+            <p>Connect your WhatsApp and set up automatic replies</p>
+        </div>
+
+        <div class="content">
+            <div class="status-card">
+                <h3>
+                    <span id="statusIndicator" class="status-indicator status-disconnected"></span>
+                    <span id="statusText">Disconnected</span>
+                </h3>
+                <p id="statusDescription">Waiting for WhatsApp connection...</p>
+            </div>
+
+            <!-- QR Code Section -->
+            <div id="qrSection" class="qr-section">
+                <h3>📱 Scan QR Code with WhatsApp</h3>
+                <p>Open WhatsApp on your phone → Settings → Linked Devices → Link a Device</p>
+                <div id="qrCode" class="qr-code hidden">
+                    <img id="qrImage" src="" alt="QR Code">
+                </div>
+                <div id="qrLoading" class="loading">
+                    Generating QR Code...
+                </div>
+            </div>
+
+            <!-- Auto Reply Form -->
+            <div id="autoReplySection" class="form-section hidden">
+                <h3>⚡ Auto Reply Settings</h3>
+                <form id="autoReplyForm">
+                    <div class="form-group">
+                        <label for="keyword">Keyword (trigger)</label>
+                        <input type="text" id="keyword" placeholder="e.g., hello, price, info" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reply">Auto Reply Message</label>
+                        <textarea id="reply" rows="3" placeholder="Enter your automatic reply message..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn">Add Auto Reply</button>
+                </form>
+
+                <div class="auto-replies-list">
+                    <h4>📋 Active Auto Replies</h4>
+                    <div id="autoRepliesList"></div>
+                </div>
+
+                <div class="disconnect-section">
+                    <button id="disconnectBtn" class="btn btn-danger">Disconnect WhatsApp</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let isConnected = false;
+        let autoReplies = [];
+
+        // DOM elements
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const statusDescription = document.getElementById('statusDescription');
+        const qrSection = document.getElementById('qrSection');
+        const qrCode = document.getElementById('qrCode');
+        const qrImage = document.getElementById('qrImage');
+        const qrLoading = document.getElementById('qrLoading');
+        const autoReplySection = document.getElementById('autoReplySection');
+        const autoReplyForm = document.getElementById('autoReplyForm');
+        const autoRepliesList = document.getElementById('autoRepliesList');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+
+        // Socket event listeners
+        socket.on('status', (data) => {
+            isConnected = data.connected;
+            autoReplies = data.autoReplies || [];
+
+            updateUI();
+            renderAutoReplies();
+
+            if (data.qrCode) {
+                showQRCode(data.qrCode);
+            }
+        });
+
+        socket.on('qr', (qrCodeData) => {
+            showQRCode(qrCodeData);
+        });
+
+        // Update UI based on connection status
+        function updateUI() {
+            if (isConnected) {
+                statusIndicator.className = 'status-indicator status-connected';
+                statusText.textContent = 'Connected';
+                statusDescription.textContent = 'WhatsApp is connected and ready for auto replies!';
+                qrSection.classList.add('hidden');
+                autoReplySection.classList.remove('hidden');
+            } else {
+                statusIndicator.className = 'status-indicator status-disconnected';
+                statusText.textContent = 'Disconnected';
+                statusDescription.textContent = 'Please scan the QR code to connect WhatsApp';
+                qrSection.classList.remove('hidden');
+                autoReplySection.classList.add('hidden');
+                qrCode.classList.add('hidden');
+                qrLoading.classList.remove('hidden');
+            }
+        }
+
+        // Show QR code
+        function showQRCode(qrCodeData) {
+            qrImage.src = qrCodeData;
+            qrCode.classList.remove('hidden');
+            qrLoading.classList.add('hidden');
+        }
+
+        // Render auto replies list
+        function renderAutoReplies() {
+            autoRepliesList.innerHTML = '';
+
+            if (autoReplies.length === 0) {
+                autoRepliesList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No auto replies configured yet.</p>';
+                return;
+            }
+
+            autoReplies.forEach((autoReply, index) => {
+                const item = document.createElement('div');
+                item.className = 'auto-reply-item';
+                item.innerHTML = `
+                    <div class="auto-reply-content">
+                        <div class="keyword">Keyword: "${autoReply.keyword}"</div>
+                        <div class="reply">${autoReply.reply}</div>
+                    </div>
+                    <button class="btn btn-danger btn-small" onclick="deleteAutoReply(${index})">Delete</button>
+                `;
+                autoRepliesList.appendChild(item);
+            });
+        }
+
+        // Add auto reply
+        autoReplyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const keyword = document.getElementById('keyword').value.trim();
+            const reply = document.getElementById('reply').value.trim();
+
+            if (!keyword || !reply) return;
+
+            try {
+                const response = await fetch('/api/auto-replies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ keyword, reply })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    autoReplies = data.autoReplies;
+                    renderAutoReplies();
+                    autoReplyForm.reset();
+                }
+            } catch (error) {
+                console.error('Error adding auto reply:', error);
+                alert('Error adding auto reply. Please try again.');
+            }
+        });
+
+        // Delete auto reply
+        async function deleteAutoReply(index) {
+            try {
+                const response = await fetch(`/api/auto-replies/${index}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    autoReplies = data.autoReplies;
+                    renderAutoReplies();
+                }
+            } catch (error) {
+                console.error('Error deleting auto reply:', error);
+                alert('Error deleting auto reply. Please try again.');
+            }
+        }
+
+        // Disconnect WhatsApp
+        disconnectBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to disconnect WhatsApp?')) {
+                try {
+                    const response = await fetch('/api/disconnect', {
+                        method: 'POST'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        isConnected = false;
+                        updateUI();
+                    }
+                } catch (error) {
+                    console.error('Error disconnecting:', error);
+                    alert('Error disconnecting. Please try again.');
+                }
+            }
+        });
+
+        // Initial load
+        updateUI();
+    </script>
+</body>
+</html>
